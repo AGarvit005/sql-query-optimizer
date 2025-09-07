@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  # Backend FastAPI Service
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    volumes:
+      # Mounts local code for live-reloading during development
+      - ./backend:/app
+    env_file:
+      - ./.env
+    depends_on:
+      db:
+        condition: service_healthy # Waits for the DB to be ready
+
+  # Frontend Nginx Service
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+
+  # PostgreSQL Database Service
+  db:
+    image: postgres:15-alpine
+    volumes:
+      # Persists database data on your local machine
+      - postgres_data:/var/lib/postgresql/data/
+    env_file:
+      - ./.env
+    ports:
+      # Exposes the DB port to your host machine for tools like DBeaver/pgAdmin
+      - "5432:5432"
+    healthcheck:
+        test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+        interval: 5s
+        timeout: 5s
+        retries: 5
+
+# Named Volume for persisting database data
+volumes:
+  postgres_data:
